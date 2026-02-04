@@ -248,7 +248,7 @@ Comprehensive test suite in `tests/` directory:
 
 ---
 
-## 🎯 Requirement Mapping
+## Requirement Mapping
 
 | Requirement                  | Implementation                                 | Status |
 | ---------------------------- | ---------------------------------------------- | ------ |
