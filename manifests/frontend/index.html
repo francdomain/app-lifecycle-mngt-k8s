@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>E-Commerce Platform</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    h1 { color: #333; }
+    .section {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .status { color: #27ae60; font-weight: bold; }
+    button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover { background: #2980b9; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛍️ E-Commerce Platform</h1>
+    <div class="section">
+      <h2>Application Status</h2>
+      <p>Frontend: <span class="status">✓ Running</span></p>
+      <p>API Gateway: <span class="status">Checking...</span></p>
+      <p>Product Service: <span class="status">Checking...</span></p>
+      <p>Order Service: <span class="status">Checking...</span></p>
+    </div>
+    <div class="section">
+      <h2>Actions</h2>
+      <button onclick="fetchProducts()">View Products</button>
+      <button onclick="fetchOrders()">View Orders</button>
+      <button onclick="checkHealth()">Check Health</button>
+    </div>
+    <div class="section">
+      <h2>API Responses</h2>
+      <pre id="response" style="background: #f9f9f9; padding: 10px; border-radius: 3px; overflow-x: auto;"></pre>
+    </div>
+  </div>
+  <script>
+    async function fetchProducts() {
+      try {
+        const response = await fetch('/api/products');
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+      } catch(e) {
+        document.getElementById('response').textContent = 'Error: ' + e.message;
+      }
+    }
+
+    async function fetchOrders() {
+      try {
+        const response = await fetch('/api/orders');
+        const data = await response.json();
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+      } catch(e) {
+        document.getElementById('response').textContent = 'Error: ' + e.message;
+      }
+    }
+
+    async function checkHealth() {
+      try {
+        const response = await fetch('/health');
+        const text = await response.text();
+        document.getElementById('response').textContent = 'Health Status: ' + text;
+      } catch(e) {
+        document.getElementById('response').textContent = 'Error: ' + e.message;
+      }
+    }
+  </script>
+</body>
+</html>

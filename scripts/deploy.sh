@@ -77,8 +77,8 @@ case "$METHOD" in
         log_success "Namespace created"
         echo ""
 
-        log_info "Step 2: Applying ConfigMaps..."
-        kubectl apply -f manifests/01-configmaps.yaml
+        log_info "Step 2: Creating ConfigMaps from configuration files..."
+        ./scripts/create-configmaps.sh "$NAMESPACE"
         log_success "ConfigMaps created"
         echo ""
 
