@@ -1,38 +1,58 @@
-# Git Repository - E-Commerce Microservices
+## macOS
+.DS_Store
 
-## Overview
-This repository contains a complete Kubernetes microservices application with:
-- Production-grade YAML manifests
-- Helm chart for application packaging
-- Advanced deployment strategies (Canary, Blue-Green)
-- Comprehensive test suite
-- Complete documentation
+## Editor / IDE
+.vscode/
+.idea/
 
-## Quick Start
-1. Clone the repository
-2. Run: `./scripts/deploy.sh kubectl ecommerce`
-3. Verify: `./tests/verify-deployment.sh ecommerce`
-4. Demo: `./scripts/demo.sh ecommerce`
+## Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+env/
+.venv/
 
-## Repository Structure
-- `manifests/` - Kubernetes YAML files
-- `helm-chart/` - Helm chart definition
-- `deployment-strategies/` - Advanced deployment configs
-- `scripts/` - Deployment automation
-- `tests/` - Verification and testing scripts
-- `docs/` - Architecture and deployment guides
+## Node
+node_modules/
 
-## Documentation
-See [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) for complete deployment instructions.
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for architecture details.
+## Environment / secrets
+.env
+.env.*
+*.secret
 
-## Assignment: Kubernetes Lifecycle Management
-Points breakdown:
-- Manifests: 30 points
-- Helm Chart: 20 points
-- Documentation: 20 points
-- Demo: 20 points
-- Tests: 10 points
-- Total: 100 points
+## Terraform / build artifacts
+.terraform/
+*.tfstate
+*.tfstate.backup
 
-All requirements have been fully implemented and tested.
+## Helm / charts
+*.tgz
+
+## Logs and temp
+*.log
+tmp/
+*.swp
+*~
+
+## Kubernetes local files
+.kube/
+kubeconfig
+
+## Misc
+*.iml
+coverage/
+.vagrant/
+
+## OS generated
+Thumbs.db
+.DS_Store
+
+## Ignore test output
+test-output/
+
+## Docker
+docker-compose.override.yml
+
+## Editor backups
+*.bak
