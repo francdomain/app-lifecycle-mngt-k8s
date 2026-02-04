@@ -1,0 +1,254 @@
+---
+# KEDA ScaledObjects for Event-Driven Autoscaling
+# These replace traditional HPA with event-driven scaling based on custom metrics
+
+# Frontend ScaledObject - Scale based on HTTP request rate
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: frontend-scaler
+  namespace: ecommerce
+spec:
+  scaleTargetRef:
+    name: frontend
+  minReplicaCount: 2
+  maxReplicaCount: 10
+  fallbacks:
+  - failureType: all
+    replicas: 3
+  triggers:
+  # Primary: HTTP request rate trigger (using Prometheus)
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus:9090  # Update if using external Prometheus
+      metricName: http_request_rate
+      threshold: "100"  # Scale up if > 100 requests/sec
+      query: |
+        sum(rate(nginx_http_requests_total{job="frontend"}[30s])) by (instance)
+    authModes: ["bearer"]
+  # Fallback: CPU-based trigger
+  - type: cpu
+    metricType: Utilization
+    metadata:
+      type: Utilization
+      value: "70"
+  # Additional: Memory trigger (scale if memory usage is high)
+  - type: memory
+    metricType: Utilization
+    metadata:
+      type: Utilization
+      value: "80"
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 30
+          policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 30
+          - type: Pods
+            value: 2
+            periodSeconds: 30
+          selectPolicy: Max
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies:
+          - type: Percent
+            value: 50
+            periodSeconds: 60
+          - type: Pods
+            value: 1
+            periodSeconds: 60
+          selectPolicy: Min
+
+---
+# API Gateway ScaledObject - Scale based on HTTP request concurrency
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: api-gateway-scaler
+  namespace: ecommerce
+spec:
+  scaleTargetRef:
+    name: api-gateway
+  minReplicaCount: 2
+  maxReplicaCount: 8
+  fallbacks:
+  - failureType: all
+    replicas: 3
+  triggers:
+  # Primary: HTTP request rate trigger
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus:9090
+      metricName: http_request_rate
+      threshold: "500"  # Scale up if > 500 requests/sec
+      query: |
+        sum(rate(nginx_http_requests_total{job="api-gateway"}[30s])) by (instance)
+    authModes: ["bearer"]
+  # Secondary: Request latency trigger (scale if latency increases)
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus:9090
+      metricName: http_request_latency
+      threshold: "1000"  # milliseconds
+      query: |
+        histogram_quantile(0.95, sum(rate(nginx_http_request_duration_seconds_bucket{job="api-gateway"}[30s])) by (le, instance))
+    authModes: ["bearer"]
+  # Fallback: CPU trigger
+  - type: cpu
+    metricType: Utilization
+    metadata:
+      type: Utilization
+      value: "75"
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 30
+          - type: Pods
+            value: 1
+            periodSeconds: 30
+          selectPolicy: Max
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies:
+          - type: Percent
+            value: 50
+            periodSeconds: 60
+          selectPolicy: Min
+
+---
+# Product Service ScaledObject - Scale based on database query latency
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: product-service-scaler
+  namespace: ecommerce
+spec:
+  scaleTargetRef:
+    name: product-service
+  minReplicaCount: 2
+  maxReplicaCount: 6
+  fallbacks:
+  - failureType: all
+    replicas: 2
+  triggers:
+  # Primary: Database query latency
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus:9090
+      metricName: db_query_latency
+      threshold: "500"  # milliseconds
+      query: |
+        histogram_quantile(0.95, sum(rate(db_query_duration_seconds_bucket{service="product-service"}[30s])) by (le))
+    authModes: ["bearer"]
+  # Secondary: HTTP request rate
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus:9090
+      metricName: product_request_rate
+      threshold: "200"
+      query: |
+        sum(rate(http_requests_total{service="product-service"}[30s]))
+    authModes: ["bearer"]
+  # Fallback: CPU and Memory
+  - type: cpu
+    metricType: Utilization
+    metadata:
+      type: Utilization
+      value: "80"
+  - type: memory
+    metricType: Utilization
+    metadata:
+      type: Utilization
+      value: "75"
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 60
+          policies:
+          - type: Percent
+            value: 50
+            periodSeconds: 60
+          selectPolicy: Max
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies:
+          - type: Percent
+            value: 25
+            periodSeconds: 120
+          selectPolicy: Min
+
+---
+# Order Service ScaledObject - Scale based on queue depth and request rate
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: order-service-scaler
+  namespace: ecommerce
+spec:
+  scaleTargetRef:
+    name: order-service
+  minReplicaCount: 2
+  maxReplicaCount: 6
+  fallbacks:
+  - failureType: all
+    replicas: 2
+  triggers:
+  # Primary: Request queue depth (number of pending orders)
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus:9090
+      metricName: order_queue_depth
+      threshold: "50"  # Scale if > 50 pending orders
+      query: |
+        sum(increase(orders_pending_total{service="order-service"}[5m]))
+    authModes: ["bearer"]
+  # Secondary: HTTP request rate
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus:9090
+      metricName: order_request_rate
+      threshold: "150"
+      query: |
+        sum(rate(http_requests_total{service="order-service", method="POST"}[30s]))
+    authModes: ["bearer"]
+  # Tertiary: Processing time
+  - type: prometheus
+    metadata:
+      serverAddress: http://prometheus:9090
+      metricName: order_processing_time
+      threshold: "2000"  # milliseconds
+      query: |
+        histogram_quantile(0.99, sum(rate(order_processing_duration_seconds_bucket[30s])) by (le))
+    authModes: ["bearer"]
+  # Fallback: CPU
+  - type: cpu
+    metricType: Utilization
+    metadata:
+      type: Utilization
+      value: "80"
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 30
+          selectPolicy: Max
+        scaleDown:
+          stabilizationWindowSeconds: 300
+          policies:
+          - type: Percent
+            value: 50
+            periodSeconds: 60
+          selectPolicy: Min

@@ -1,0 +1,222 @@
+---
+# KEDA Setup - Install KEDA operator and configure ScaledObjects
+# KEDA (Kubernetes Event-driven Autoscaling) provides advanced scaling capabilities
+# beyond CPU/memory metrics, supporting custom metrics and event sources
+
+# KEDA Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: keda
+  labels:
+    app: keda
+    version: v2
+
+---
+# KEDA Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: keda-operator
+  namespace: keda
+  labels:
+    app: keda
+
+---
+# KEDA ClusterRole - Permissions for KEDA operator
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: keda-operator
+  labels:
+    app: keda
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets", "services"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["get", "list", "patch"]
+- apiGroups: ["keda.sh"]
+  resources: ["scaledobjects", "scaledobjects/status"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["keda.sh"]
+  resources: ["triggerauthentications"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+---
+# KEDA ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: keda-operator
+  labels:
+    app: keda
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: keda-operator
+subjects:
+- kind: ServiceAccount
+  name: keda-operator
+  namespace: keda
+
+---
+# KEDA Operator Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keda-operator
+  namespace: keda
+  labels:
+    app: keda
+    component: operator
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: keda
+      component: operator
+  template:
+    metadata:
+      name: keda-operator
+      labels:
+        app: keda
+        component: operator
+    spec:
+      serviceAccountName: keda-operator
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 65534
+      containers:
+      - name: keda-operator
+        image: ghcr.io/kedacore/keda-operator:2.13
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: WATCH_NAMESPACE
+          value: ""  # Watch all namespaces
+        - name: OPERATOR_NAME
+          value: "keda-operator"
+        ports:
+        - name: metrics
+          containerPort: 8080
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 6789
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 6789
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+
+---
+# KEDA Metrics Server Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: keda-metrics-apiserver
+  namespace: keda
+  labels:
+    app: keda
+    component: metrics-server
+spec:
+  ports:
+  - name: metrics
+    port: 443
+    protocol: TCP
+    targetPort: 6443
+  selector:
+    app: keda
+    component: metrics-server
+
+---
+# KEDA Metrics Server Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keda-metrics-apiserver
+  namespace: keda
+  labels:
+    app: keda
+    component: metrics-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keda
+      component: metrics-server
+  template:
+    metadata:
+      name: keda-metrics-apiserver
+      labels:
+        app: keda
+        component: metrics-server
+    spec:
+      serviceAccountName: keda-operator
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 65534
+      containers:
+      - name: keda-metrics-apiserver
+        image: ghcr.io/kedacore/keda-metrics-apiserver:2.13
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: metrics
+          containerPort: 6443
+        env:
+        - name: OPERATOR_NAME
+          value: "keda-operator"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 6789
+            scheme: HTTPS
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 6789
+            scheme: HTTPS
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
