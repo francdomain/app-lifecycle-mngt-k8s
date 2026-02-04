@@ -1,0 +1,217 @@
+---
+# Service URLs ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-urls
+  namespace: ecommerce
+data:
+  PRODUCT_SERVICE_URL: "http://product-service:8080"
+  ORDER_SERVICE_URL: "http://order-service:8080"
+  FRONTEND_URL: "http://frontend:80"
+  API_GATEWAY_URL: "http://api-gateway:80"
+
+---
+# Feature Flags ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: feature-flags
+  namespace: ecommerce
+data:
+  FEATURE_NEW_DASHBOARD: "true"
+  FEATURE_BETA_CHECKOUT: "false"
+  FEATURE_RECOMMENDATIONS: "true"
+  LOG_LEVEL: "info"
+  CACHE_ENABLED: "true"
+  CACHE_TTL: "300"
+
+---
+# API Gateway Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: ecommerce
+data:
+  nginx.conf: |
+    user nginx;
+    worker_processes auto;
+    error_log /var/log/nginx/error.log warn;
+    pid /var/run/nginx.pid;
+
+    events {
+      worker_connections 1024;
+    }
+
+    http {
+      include /etc/nginx/mime.types;
+      default_type application/octet-stream;
+
+      log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+      access_log /var/log/nginx/access.log main;
+
+      sendfile on;
+      tcp_nopush on;
+      tcp_nodelay on;
+      keepalive_timeout 65;
+      types_hash_max_size 2048;
+      client_max_body_size 20M;
+
+      gzip on;
+      gzip_vary on;
+      gzip_proxied any;
+      gzip_types text/plain text/css text/xml text/javascript application/json;
+
+      upstream product_service {
+        server product-service:8080;
+      }
+
+      upstream order_service {
+        server order-service:8080;
+      }
+
+      server {
+        listen 80;
+        server_name _;
+
+        location / {
+          root /usr/share/nginx/html;
+          try_files $uri /index.html;
+        }
+
+        location /api/products {
+          proxy_pass http://product_service;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_connect_timeout 30s;
+          proxy_send_timeout 30s;
+          proxy_read_timeout 30s;
+        }
+
+        location /api/orders {
+          proxy_pass http://order_service;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_connect_timeout 30s;
+          proxy_send_timeout 30s;
+          proxy_read_timeout 30s;
+        }
+
+        location /health {
+          access_log off;
+          return 200 "healthy\n";
+          add_header Content-Type text/plain;
+        }
+      }
+    }
+
+---
+# Frontend HTML ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-html
+  namespace: ecommerce
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>E-Commerce Platform</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 0;
+          padding: 20px;
+          background: #f5f5f5;
+        }
+        .container {
+          max-width: 1200px;
+          margin: 0 auto;
+          background: white;
+          padding: 20px;
+          border-radius: 5px;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        .section {
+          margin: 20px 0;
+          padding: 15px;
+          border: 1px solid #ddd;
+          border-radius: 5px;
+        }
+        .status { color: #27ae60; font-weight: bold; }
+        button {
+          background: #3498db;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 5px;
+          cursor: pointer;
+          margin: 5px;
+        }
+        button:hover { background: #2980b9; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>🛍️ E-Commerce Platform</h1>
+        <div class="section">
+          <h2>Application Status</h2>
+          <p>Frontend: <span class="status">✓ Running</span></p>
+          <p>API Gateway: <span class="status">Checking...</span></p>
+          <p>Product Service: <span class="status">Checking...</span></p>
+          <p>Order Service: <span class="status">Checking...</span></p>
+        </div>
+        <div class="section">
+          <h2>Actions</h2>
+          <button onclick="fetchProducts()">View Products</button>
+          <button onclick="fetchOrders()">View Orders</button>
+          <button onclick="checkHealth()">Check Health</button>
+        </div>
+        <div class="section">
+          <h2>API Responses</h2>
+          <pre id="response" style="background: #f9f9f9; padding: 10px; border-radius: 3px; overflow-x: auto;"></pre>
+        </div>
+      </div>
+      <script>
+        async function fetchProducts() {
+          try {
+            const response = await fetch('/api/products');
+            const data = await response.json();
+            document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+          } catch(e) {
+            document.getElementById('response').textContent = 'Error: ' + e.message;
+          }
+        }
+
+        async function fetchOrders() {
+          try {
+            const response = await fetch('/api/orders');
+            const data = await response.json();
+            document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+          } catch(e) {
+            document.getElementById('response').textContent = 'Error: ' + e.message;
+          }
+        }
+
+        async function checkHealth() {
+          try {
+            const response = await fetch('/health');
+            const text = await response.text();
+            document.getElementById('response').textContent = 'Health Status: ' + text;
+          } catch(e) {
+            document.getElementById('response').textContent = 'Error: ' + e.message;
+          }
+        }
+      </script>
+    </body>
+    </html>

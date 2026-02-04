@@ -1,0 +1,211 @@
+# Default values for ecommerce-app
+# Global configuration
+global:
+  namespace: ecommerce
+  imagePullPolicy: IfNotPresent
+
+# Frontend Configuration
+frontend:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: nginx
+    tag: alpine
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 80
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+  healthChecks:
+    startup:
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 2
+      failureThreshold: 3
+    readiness:
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 2
+    liveness:
+      initialDelaySeconds: 20
+      periodSeconds: 15
+      timeoutSeconds: 3
+      failureThreshold: 3
+  strategy:
+    type: canary  # canary, bluegreen, or rolling
+
+# API Gateway Configuration
+apiGateway:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: nginx
+    tag: alpine
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 80
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 75
+  healthChecks:
+    startup:
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 2
+      failureThreshold: 3
+    readiness:
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 2
+    liveness:
+      initialDelaySeconds: 20
+      periodSeconds: 15
+      timeoutSeconds: 3
+      failureThreshold: 3
+  strategy:
+    type: bluegreen  # canary, bluegreen, or rolling
+
+# Product Service Configuration
+productService:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: kennethreitz/httpbin
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 80
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 80
+  healthChecks:
+    startup:
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 2
+      failureThreshold: 3
+    readiness:
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 2
+    liveness:
+      initialDelaySeconds: 20
+      periodSeconds: 15
+      timeoutSeconds: 3
+      failureThreshold: 3
+
+# Order Service Configuration
+orderService:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: kennethreitz/httpbin
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 80
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 80
+  healthChecks:
+    startup:
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 2
+      failureThreshold: 3
+    readiness:
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 2
+    liveness:
+      initialDelaySeconds: 20
+      periodSeconds: 15
+      timeoutSeconds: 3
+      failureThreshold: 3
+
+# Configuration Maps
+configMaps:
+  serviceUrls:
+    PRODUCT_SERVICE_URL: "http://product-service:8080"
+    ORDER_SERVICE_URL: "http://order-service:8080"
+    FRONTEND_URL: "http://frontend:80"
+    API_GATEWAY_URL: "http://api-gateway:80"
+
+  featureFlags:
+    FEATURE_NEW_DASHBOARD: "true"
+    FEATURE_BETA_CHECKOUT: "false"
+    FEATURE_RECOMMENDATIONS: "true"
+    LOG_LEVEL: "info"
+    CACHE_ENABLED: "true"
+    CACHE_TTL: "300"
+
+# Secrets
+secrets:
+  apiKeys:
+    API_KEY: "demo-api-key-12345"
+    DB_PASSWORD: "secure-password-789"
+    JWT_SECRET: "jwt-secret-key-for-authentication"
+
+# Monitoring and Logging
+monitoring:
+  enabled: false
+  prometheus:
+    enabled: false
+    interval: 30s
+  logging:
+    enabled: false
+    level: info
+
+# Network Policies
+networkPolicy:
+  enabled: false
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1

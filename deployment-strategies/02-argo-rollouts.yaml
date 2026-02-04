@@ -1,0 +1,186 @@
+---
+# Argo Rollouts Configuration for Advanced Deployment Strategies
+# Requires: kubectl plugin and Argo Rollouts controller
+# Install: kubectl create namespace argo-rollouts && helm repo add argo https://argoproj.github.io/argo-helm && helm install argo-rollouts argo/argo-rollouts -n argo-rollouts
+
+# Frontend Rollout - Canary Strategy
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: frontend-rollout
+  namespace: ecommerce
+spec:
+  replicas: 3
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: nginx:latest
+        ports:
+        - name: http
+          containerPort: 80
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 20
+          periodSeconds: 15
+
+  strategy:
+    canary:
+      steps:
+      - setWeight: 20
+      - pause: {duration: 5m}
+      - setWeight: 40
+      - pause: {duration: 5m}
+      - setWeight: 60
+      - pause: {duration: 5m}
+      - setWeight: 80
+      - pause: {duration: 5m}
+
+      analysis:
+        interval: 1m
+        threshold: 5
+        metrics:
+        - name: error-rate
+          interval: 1m
+        # Requires Prometheus
+        # query: |
+        #   sum(rate(nginx_requests_total{job="frontend",status=~"5.."}[1m])) /
+        #   sum(rate(nginx_requests_total{job="frontend"}[1m]))
+
+      trafficWeight:
+        maxWeight: 100
+        stepWeight: 20
+
+---
+# API Gateway Rollout - Blue-Green Strategy
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: api-gateway-rollout
+  namespace: ecommerce
+spec:
+  replicas: 2
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: api-gateway
+        image: nginx:latest
+        ports:
+        - name: http
+          containerPort: 80
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 20
+          periodSeconds: 15
+
+  strategy:
+    blueGreen:
+      activeService: api-gateway-active
+      previewService: api-gateway-preview
+      autoPromotionEnabled: false
+      autoPromotionSeconds: 30
+      maxSurge: 1
+      prePromotionAnalysis:
+        args:
+        - name: basic-http-tests
+      postPromotionAnalysis:
+        args:
+        - name: verify-stability
+
+---
+# API Gateway Active Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway-active
+  namespace: ecommerce
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: api-gateway
+    active: "true"
+
+---
+# API Gateway Preview Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway-preview
+  namespace: ecommerce
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: api-gateway
+    active: "false"
+
+---
+# Analysis Template for Rollout validation
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: http-success-rate
+  namespace: ecommerce
+spec:
+  args:
+  - name: service-name
+    value: api-gateway
+  metrics:
+  - name: success-rate
+    interval: 30s
+    count: 5
+    failureLimit: 2
+    failureScore: 10

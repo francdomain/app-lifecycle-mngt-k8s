@@ -1,0 +1,120 @@
+{{- if .Values.productService.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: product-service
+    tier: backend
+spec:
+  type: {{ .Values.productService.service.type }}
+  ports:
+  - name: http
+    port: {{ .Values.productService.service.port }}
+    targetPort: {{ .Values.productService.service.targetPort }}
+    protocol: TCP
+  selector:
+    app: product-service
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: product-service
+    tier: backend
+spec:
+  replicas: {{ .Values.productService.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+    spec:
+      containers:
+      - name: product-service
+        image: {{ .Values.productService.image.repository }}:{{ .Values.productService.image.tag }}
+        imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.productService.service.targetPort }}
+          protocol: TCP
+
+        startupProbe:
+          httpGet:
+            path: /status/200
+            port: {{ .Values.productService.service.targetPort }}
+          initialDelaySeconds: {{ .Values.productService.healthChecks.startup.initialDelaySeconds }}
+          periodSeconds: {{ .Values.productService.healthChecks.startup.periodSeconds }}
+          timeoutSeconds: {{ .Values.productService.healthChecks.startup.timeoutSeconds }}
+          failureThreshold: {{ .Values.productService.healthChecks.startup.failureThreshold }}
+
+        readinessProbe:
+          httpGet:
+            path: /status/200
+            port: {{ .Values.productService.service.targetPort }}
+          initialDelaySeconds: {{ .Values.productService.healthChecks.readiness.initialDelaySeconds }}
+          periodSeconds: {{ .Values.productService.healthChecks.readiness.periodSeconds }}
+          timeoutSeconds: {{ .Values.productService.healthChecks.readiness.timeoutSeconds }}
+          failureThreshold: {{ .Values.productService.healthChecks.readiness.failureThreshold }}
+
+        livenessProbe:
+          httpGet:
+            path: /status/200
+            port: {{ .Values.productService.service.targetPort }}
+          initialDelaySeconds: {{ .Values.productService.healthChecks.liveness.initialDelaySeconds }}
+          periodSeconds: {{ .Values.productService.healthChecks.liveness.periodSeconds }}
+          timeoutSeconds: {{ .Values.productService.healthChecks.liveness.timeoutSeconds }}
+          failureThreshold: {{ .Values.productService.healthChecks.liveness.failureThreshold }}
+
+        env:
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: feature-flags
+              key: LOG_LEVEL
+
+        resources:
+          requests:
+            cpu: {{ .Values.productService.resources.requests.cpu }}
+            memory: {{ .Values.productService.resources.requests.memory }}
+          limits:
+            cpu: {{ .Values.productService.resources.limits.cpu }}
+            memory: {{ .Values.productService.resources.limits.memory }}
+
+      terminationGracePeriodSeconds: 30
+
+{{- if .Values.productService.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: product-service-hpa
+  namespace: {{ .Values.global.namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: product-service
+  minReplicas: {{ .Values.productService.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.productService.autoscaling.maxReplicas }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.productService.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}
+{{- end }}
