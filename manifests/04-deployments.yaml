@@ -23,9 +23,6 @@ spec:
       labels:
         app: frontend
         version: v1
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "80"
     spec:
       containers:
       - name: frontend
@@ -120,9 +117,6 @@ spec:
       labels:
         app: api-gateway
         version: v1
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "80"
     spec:
       containers:
       - name: api-gateway
@@ -229,9 +223,6 @@ spec:
     metadata:
       labels:
         app: product-service
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "8080"
     spec:
       containers:
       - name: product-service
@@ -321,9 +312,6 @@ spec:
     metadata:
       labels:
         app: order-service
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "8080"
     spec:
       containers:
       - name: order-service
