@@ -10,6 +10,8 @@ set -e
 
 NAMESPACE=${1:-ecommerce}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Project root (one level up from scripts)
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Color codes
 BLUE='\033[0;34m'
@@ -33,19 +35,19 @@ kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -
 log_success "Namespace ready"
 echo ""
 
-# Create API Gateway ConfigMap from nginx.conf
-log_info "Creating api-gateway-config ConfigMap from api-gateway/nginx.conf..."
+# Create API Gateway ConfigMap from nginx.conf (manifests directory)
+log_info "Creating api-gateway-config ConfigMap from manifests/api-gateway/nginx.conf..."
 kubectl create configmap api-gateway-config \
-  --from-file="$SCRIPT_DIR/api-gateway/nginx.conf" \
+  --from-file="$PROJECT_ROOT/manifests/api-gateway/nginx.conf" \
   -n "$NAMESPACE" \
   --dry-run=client -o yaml | kubectl apply -f -
 log_success "api-gateway-config created"
 echo ""
 
-# Create Frontend ConfigMap from index.html
-log_info "Creating frontend-html ConfigMap from frontend/index.html..."
+# Create Frontend ConfigMap from index.html (manifests directory)
+log_info "Creating frontend-html ConfigMap from manifests/frontend/index.html..."
 kubectl create configmap frontend-html \
-  --from-file="$SCRIPT_DIR/frontend/index.html" \
+  --from-file="$PROJECT_ROOT/manifests/frontend/index.html" \
   -n "$NAMESPACE" \
   --dry-run=client -o yaml | kubectl apply -f -
 log_success "frontend-html created"
