@@ -100,7 +100,6 @@ spec:
     spec:
       serviceAccountName: keda-operator
       securityContext:
-        runAsNonRoot: true
         fsGroup: 65534
       containers:
       - name: keda-operator
@@ -139,7 +138,7 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
-          # Note: runAsNonRoot enforced at pod level; image uses non-numeric user "nonroot"
+          # Note: runAsNonRoot removed due to image using non-numeric user "nonroot"
 
 ---
 # KEDA Metrics Server Service
@@ -186,7 +185,6 @@ spec:
     spec:
       serviceAccountName: keda-operator
       securityContext:
-        runAsNonRoot: true
         fsGroup: 65534
       containers:
       - name: keda-metrics-apiserver
@@ -197,6 +195,8 @@ spec:
         - name: metrics
           containerPort: 6443
         env:
+        - name: WATCH_NAMESPACE
+          value: ""  # Watch all namespaces
         - name: OPERATOR_NAME
           value: "keda-operator"
         resources:
@@ -222,8 +222,7 @@ spec:
           periodSeconds: 10
         securityContext:
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          # Note: runAsNonRoot enforced at pod level; image uses non-numeric user "nonroot"
+          # Note: readOnlyRootFilesystem removed for certificate generation; runAsNonRoot removed due to image using non-numeric user "nonroot"
         volumeMounts:
         - name: temp-vol
           mountPath: /tmp

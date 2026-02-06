@@ -21,18 +21,13 @@ spec:
   minReplicaCount: 2
   maxReplicaCount: 10
   triggers:
-  # Primary: CPU-based trigger
-  - type: cpu
-    metricType: Utilization
+  # CPU-based scaling using kubernetes-workload trigger
+  - type: kubernetes-workload
     metadata:
-      type: Utilization
+      podSelector: 'app=frontend'
       value: "70"
-  # Secondary: Memory trigger (scale if memory usage is high)
-  - type: memory
-    metricType: Utilization
-    metadata:
-      type: Utilization
-      value: "80"
+      type: "Resource"
+      resource: "cpu"
   advanced:
     horizontalPodAutoscalerConfig:
       behavior:
@@ -72,15 +67,13 @@ spec:
   triggers:
   # Primary: CPU-based trigger
   - type: cpu
-    metricType: Utilization
     metadata:
-      type: Utilization
+      metricType: Utilization
       value: "75"
   # Secondary: Memory trigger
   - type: memory
-    metricType: Utilization
     metadata:
-      type: Utilization
+      metricType: Utilization
       value: "80"
   advanced:
     horizontalPodAutoscalerConfig:
@@ -118,15 +111,13 @@ spec:
   triggers:
   # Primary: CPU-based trigger
   - type: cpu
-    metricType: Utilization
     metadata:
-      type: Utilization
+      metricType: Utilization
       value: "80"
   # Secondary: Memory trigger
   - type: memory
-    metricType: Utilization
     metadata:
-      type: Utilization
+      metricType: Utilization
       value: "75"
   advanced:
     horizontalPodAutoscalerConfig:
@@ -161,15 +152,13 @@ spec:
   triggers:
   # Primary: CPU-based trigger
   - type: cpu
-    metricType: Utilization
     metadata:
-      type: Utilization
+      metricType: Utilization
       value: "80"
   # Secondary: Memory trigger
   - type: memory
-    metricType: Utilization
     metadata:
-      type: Utilization
+      metricType: Utilization
       value: "80"
   advanced:
     horizontalPodAutoscalerConfig:
