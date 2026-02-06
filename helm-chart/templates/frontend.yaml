@@ -79,6 +79,11 @@ spec:
           timeoutSeconds: {{ .Values.frontend.healthChecks.liveness.timeoutSeconds }}
           failureThreshold: {{ .Values.frontend.healthChecks.liveness.failureThreshold }}
 
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+
         resources:
           requests:
             cpu: {{ .Values.frontend.resources.requests.cpu }}
@@ -86,6 +91,11 @@ spec:
           limits:
             cpu: {{ .Values.frontend.resources.limits.cpu }}
             memory: {{ .Values.frontend.resources.limits.memory }}
+
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: frontend-config
 
       terminationGracePeriodSeconds: 30
 

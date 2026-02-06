@@ -30,8 +30,11 @@ echo ""
 
 # Step 2: Wait for KEDA operator to be ready
 echo -e "${YELLOW}Step 2: Waiting for KEDA operator to be ready...${NC}"
-kubectl rollout status deployment/keda-operator -n "$KEDA_NAMESPACE" --timeout=2m || {
+kubectl rollout status deployment/keda-operator -n "$KEDA_NAMESPACE" --timeout=5m || {
   echo -e "${RED}✗ KEDA operator failed to deploy${NC}"
+  echo -e "${YELLOW}Check pod status: kubectl get pods -n $KEDA_NAMESPACE${NC}"
+  echo -e "${YELLOW}Check events: kubectl get events -n $KEDA_NAMESPACE --sort-by='.lastTimestamp'${NC}"
+  echo -e "${YELLOW}Check logs: kubectl logs -n $KEDA_NAMESPACE -l app=keda,component=operator --tail=50${NC}"
   exit 1
 }
 echo -e "${GREEN}✓ KEDA operator is ready${NC}"
@@ -39,7 +42,7 @@ echo ""
 
 # Step 3: Wait for KEDA metrics server to be ready
 echo -e "${YELLOW}Step 3: Waiting for KEDA metrics server to be ready...${NC}"
-kubectl rollout status deployment/keda-metrics-apiserver -n "$KEDA_NAMESPACE" --timeout=2m || {
+kubectl rollout status deployment/keda-metrics-apiserver -n "$KEDA_NAMESPACE" --timeout=3m || {
   echo -e "${YELLOW}⚠ KEDA metrics server still starting (this can take a moment)${NC}"
 }
 echo -e "${GREEN}✓ KEDA metrics server is running${NC}"

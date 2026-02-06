@@ -81,11 +81,11 @@ metadata:
     app: keda
     component: operator
 spec:
-  replicas: 2
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: 1
+      maxSurge: 0
       maxUnavailable: 1
   selector:
     matchLabels:
@@ -112,8 +112,10 @@ spec:
         - name: OPERATOR_NAME
           value: "keda-operator"
         ports:
-        - name: metrics
+        - name: http
           containerPort: 8080
+        - name: health
+          containerPort: 8081
         resources:
           requests:
             cpu: 100m
@@ -124,14 +126,14 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 6789
-          initialDelaySeconds: 30
+            port: 8081
+          initialDelaySeconds: 25
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /readyz
-            port: 6789
-          initialDelaySeconds: 30
+            port: 8081
+          initialDelaySeconds: 20
           periodSeconds: 10
         securityContext:
           allowPrivilegeEscalation: false
@@ -205,18 +207,24 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 6789
+            port: 6443
             scheme: HTTPS
-          initialDelaySeconds: 30
+          initialDelaySeconds: 5
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /readyz
-            port: 6789
+            port: 6443
             scheme: HTTPS
-          initialDelaySeconds: 30
+          initialDelaySeconds: 5
           periodSeconds: 10
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
           runAsNonRoot: true
+        volumeMounts:
+        - name: temp-vol
+          mountPath: /tmp
+      volumes:
+        - name: temp-vol
+          emptyDir: {}

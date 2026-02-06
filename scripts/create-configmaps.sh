@@ -44,6 +44,15 @@ kubectl create configmap api-gateway-config \
 log_success "api-gateway-config created"
 echo ""
 
+# Create Frontend Nginx ConfigMap (for /health and static serving)
+log_info "Creating frontend-config ConfigMap from manifests/frontend/nginx.conf..."
+kubectl create configmap frontend-config \
+  --from-file="$PROJECT_ROOT/manifests/frontend/nginx.conf" \
+  -n "$NAMESPACE" \
+  --dry-run=client -o yaml | kubectl apply -f -
+log_success "frontend-config created"
+echo ""
+
 # Create Frontend ConfigMap from index.html (manifests directory)
 log_info "Creating frontend-html ConfigMap from manifests/frontend/index.html..."
 kubectl create configmap frontend-html \

@@ -88,13 +88,19 @@ lifecycle-mngt/
 chmod +x scripts/*.sh
 chmod +x tests/*.sh
 
-# Deploy the application
+# Step 1: Create ConfigMaps
+./scripts/create-configmaps.sh ecommerce
+
+# Step 2: Deploy the application
 ./scripts/deploy.sh kubectl ecommerce
+
+# Step 3: Deploy KEDA (optional, for advanced autoscaling)
+./scripts/deploy-keda.sh ecommerce
 
 # Verify deployment
 ./tests/verify-deployment.sh ecommerce
 
-# Run demo
+# Step 4: Run the demo
 ./scripts/demo.sh ecommerce
 ```
 

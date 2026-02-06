@@ -36,11 +36,12 @@ spec:
         # Health Checks
         startupProbe:
           httpGet:
-            path: /health
+            # path: /health
+            path: /
             port: 80
-          initialDelaySeconds: 5
+          initialDelaySeconds: 10
           periodSeconds: 5
-          timeoutSeconds: 2
+          timeoutSeconds: 5
           successThreshold: 1
           failureThreshold: 3
 
@@ -90,7 +91,7 @@ spec:
           name: frontend-html
       - name: nginx-config
         configMap:
-          name: api-gateway-config
+          name: frontend-config
 
 ---
 # API Gateway Deployment with Health Checks
@@ -132,9 +133,9 @@ spec:
           httpGet:
             path: /health
             port: 80
-          initialDelaySeconds: 5
+          initialDelaySeconds: 10
           periodSeconds: 5
-          timeoutSeconds: 2
+          timeoutSeconds: 5
           successThreshold: 1
           failureThreshold: 3
 
