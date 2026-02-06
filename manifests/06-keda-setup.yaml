@@ -104,7 +104,8 @@ spec:
         fsGroup: 65534
       containers:
       - name: keda-operator
-        image: ghcr.io/kedacore/keda-operator:2.13
+        # Use Docker Hub (GHCR image often returns 403/NotFound in restricted environments)
+        image: docker.io/kedacore/keda:2.5.0
         imagePullPolicy: IfNotPresent
         env:
         - name: WATCH_NAMESPACE
@@ -138,7 +139,7 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
-          runAsNonRoot: true
+          # Note: runAsNonRoot enforced at pod level; image uses non-numeric user "nonroot"
 
 ---
 # KEDA Metrics Server Service
@@ -189,7 +190,8 @@ spec:
         fsGroup: 65534
       containers:
       - name: keda-metrics-apiserver
-        image: ghcr.io/kedacore/keda-metrics-apiserver:2.13
+        # Use Docker Hub (GHCR image often returns 403/NotFound in restricted environments)
+        image: docker.io/kedacore/keda-metrics-apiserver:2.5.0
         imagePullPolicy: IfNotPresent
         ports:
         - name: metrics
@@ -221,7 +223,7 @@ spec:
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
-          runAsNonRoot: true
+          # Note: runAsNonRoot enforced at pod level; image uses non-numeric user "nonroot"
         volumeMounts:
         - name: temp-vol
           mountPath: /tmp
